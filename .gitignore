@@ -16,11 +16,9 @@ Release/
 *.ilk
 *.meta
 
-# STM32CubeMX Project Files (sensitive configuration)
-*.ioc
+# STM32CubeMX Project Files (keep .ioc for reference)
 *.ioc.bak
 *.ioc.backup
-.mxproject
 
 # Build & Compilation
 *.o
