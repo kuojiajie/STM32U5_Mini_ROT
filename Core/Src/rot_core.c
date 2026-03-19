@@ -22,20 +22,20 @@ void ROT_System_Init(void) {
 void ROT_SecureBoot_Sequence(void) {
     printf("[ROT] Starting Secure Boot Sequence...\r\n");
 
-    // 1. 倒數 5 秒 (模擬驗證時間)
+    // 1. Countdown 5 seconds (simulated verification time)
     for(int i=5; i>0; i--) {
         printf("[ROT] Verifying Firmware... (Holding Reset: %d)\r\n", i);
 
         HAL_Delay(1000);
     }
 
-    // 2. 解鎖 (Release Reset)
+    // 2. Unlock (Release Reset)
     printf("[ROT] Verification PASS. Releasing the Gate!\r\n");
 
-    // Open Drain High = Float = Pi 內部上拉生效 = 開機
+    // Open Drain High = Float = Pi internal pull-up active = Boot
     HAL_GPIO_WritePin(PI_RESET_GPIO_Port, PI_RESET_Pin, GPIO_PIN_SET);
 
-    // 3. 監控
+    // 3. Monitor
     printf("[ROT] Target System (Pi) should be booting now.\r\n");
 
     while(1) {
