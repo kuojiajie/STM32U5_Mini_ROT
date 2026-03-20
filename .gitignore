@@ -1,92 +1,29 @@
-# Exception: Allow README.md
-!README.md
-
-# STM32CubeIDE & Build Outputs
+# Build Artifacts (generated during compilation)
 Debug/
 Release/
 *.elf
-*.hex
 *.bin
+*.hex
 *.map
-*.out
+*.o
 *.d
 *.su
-*.idb
-*.pdb
-*.ilk
-*.meta
+*.list
 
-# STM32CubeMX Project Files (keep .ioc for reference)
-*.ioc.bak
-*.ioc.backup
-
-# Build & Compilation
-*.o
-*.obj
-*.exe
-*.a
-*.lib
-*.exp
-*.dll
-
-# IDE & Editor Files
-.vscode/
-.cproject
-.project
+# IDE Configuration Files (user-specific settings)
 .settings/
+.mxproject
 *.launch
-*.sublime-*
 
-# Temporary Files
-*.tmp
-*.temp
-*~
-*.swp
-*.swo
+# STM32CubeMX Backup Files
+*.ioc.bak
+
+# Operating System Generated Files
 .DS_Store
 Thumbs.db
 
-# Logs & Debug
-*.log
-*.trace
-*.out
-
-# ST-Link & Programming
-*.stlink
-*.jlink
-
-# Core/Src (keep custom files only)
-# Core/Src/main.c
-# Core/Src/rot_core.c  
-# Core/Src/crypto_mock.c
-# Core/Src/uart_utils.c
-# Core/Inc/keys_data.h
-
-# Core/Src (STM32CubeMX auto-generated)
-Core/Src/stm32u5xx_it.c
-Core/Src/stm32u5xx_hal_msp.c
-Core/Src/system_stm32u5xx.c
-Core/Src/syscalls.c
-Core/Src/sysmem.c
-Core/Src/gpio.c
-Core/Src/usart.c
-
-# Core/Inc (STM32CubeMX auto-generated)
-Core/Inc/stm32u5xx_it.h
-Core/Inc/stm32u5xx_hal_conf.h
-Core/Inc/main.h
-Core/Inc/gpio.h
-Core/Inc/usart.h
-
-# Core/Startup (auto-generated)
-Core/Startup/
-
-# Drivers (STM32 HAL library)
-Drivers/
-
-# Linker Scripts (build-specific)
-STM32U575ZITXQ_FLASH.ld
-STM32U575ZITXQ_RAM.ld
-
-# Documentation (other MD ignored)
-*.txt
+# --- Essential Project Files (DO NOT IGNORE) ---
+# STM32CubeMX Configuration (.ioc)
+# STM32CubeIDE Project Files (.project, .cproject)
+# HAL Library and Generated Code (Core/, Drivers/)
+# Linker Scripts (*.ld)

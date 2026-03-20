@@ -1,172 +1,91 @@
-# 🛡️ STM32U5 Mini-ROT (Phase 1: Absolute Control)
+# STM32U5 Mini-ROT
 
-## 🎯 Phase Goal
+## Project Goal
 
-Establish **absolute control** of the **Trust Anchor (STM32)** over the **Target System (Raspberry Pi)**.
-
-The STM32 must immediately hold the Pi's Reset pin upon power-on through a physical connection, preventing boot. The STM32 executes a simulated verification process (5-second countdown), then releases control to allow Pi startup upon successful verification.
+Establish absolute control of the Trust Anchor (STM32) over the Target System (Raspberry Pi). The STM32 actively holds the Pi's Reset pin low upon power-on to prevent unauthorized booting. It executes a simulated verification (5s countdown) before releasing control.
 
 ---
 
-## 🛠️ Hardware Setup
-
-### Components
-- **Trust Anchor**: STM32 NUCLEO-U575ZI-Q
-- **Target System**: Raspberry Pi 4B
+## Hardware Setup
 
 ### Connection Interface
 
-| STM32 Pin | STM32 Connector | Raspberry Pi Pin | Signal Name | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **PF15** | **CN10 Pin 12 (D2)** | **J2 Header (RUN)** | **PI_RESET** | Critical signal controlling Pi boot/shutdown |
-| **GND** | CN11 Pin 20 / CN9 Pin 19 | Pin 6 / Pin 9 | **Common Ground** | **[CRITICAL]** Must be properly connected. **Soldering** or thick wire recommended |
-| **USB Shell** | USB Connector | USB/HDMI Shell | **Chassis GND** | **[RECOMMENDED]** Connect both metal enclosures to eliminate ground impedance |
+**Common Ground is critical.** Ensure a low-impedance ground connection (e.g., soldering or connecting USB shells) to prevent control failure.
+
+| STM32 Pin | Raspberry Pi Pin | Signal Name | Description |
+| :--- | :--- | :--- | :--- |
+| PF15 (CN10-12) | RUN (J2) | PI_RESET | Active-Low Reset Control |
+| GND | GND | Common GND | Must connect to eliminate voltage potential diff |
 
 ### Power Supply
-- **STM32**: Powered via CN1 (ST-LINK USB) connected to PC for debugging
+
+- **STM32**: Powered via ST-LINK USB
 - **Raspberry Pi**: Independently powered via USB-C
 
-> **⚠️ Hardware Notes**:
-> - **Common Ground** is critical for Phase 1 success. Single dupont wire may have high impedance causing control failure. **Soldering** or **thick wire with chassis connection** recommended.
-> - **PF15** selected as clean GPIO without button capacitance or LED load interference.
-
 ---
 
-## 💻 Software Implementation
+## Key Implementation Details
 
-### 1. STM32CubeMX Configuration
+This project deviates from the standard STM32CubeMX generated code in specific ways to ensure security requirements.
 
-#### MCU Settings
-- **MCU**: STM32U575ZITxQ
+### 1. Pin Configuration (.ioc)
 
-#### Pinout Configuration
-- **PF15**: Configured as `GPIO_Output`
-  - **Level**: **Low** (default low, locks on power-on)
-  - **Mode**: **Output Open Drain** (standard Reset control mode, safe and effective)
-  - **Pull**: **No Pull-up and No Pull-down** (relies on Pi internal pull-up)
-  - **Label**: **`PI_RESET`**
+**PF15 (PI_RESET)**: Configured as Output Open Drain with Low default level.
 
-- **LPUART1** (or USART1):
-  - **Mode**: `Asynchronous`
-  - **Baud Rate**: `115200` (for printf Log output)
+**Reason**: PF15 is a clean GPIO without onboard capacitor interference (unlike PA0), ensuring instant reset signal.
 
-#### Project Manager
-- **Toolchain**: `STM32CubeIDE`
-- **Code Generator**: Check `Generate peripheral initialization as a pair of '.c/.h' files`
+**UART1**: Configured at 115200 bps for debug logging.
 
-### 2. New Project Files
+### 2. Initialization Strategy (main.c)
 
-Create the following files in IDE **Project Explorer** by right-clicking corresponding folders and selecting `New -> Header/Source File`:
-
-| File Name | Directory | Function Description |
-| :--- | :--- | :--- |
-| **`uart_utils.h`** | `Core/Inc/` | Define printf redirection interface |
-| **`uart_utils.c`** | `Core/Src/` | Implement `_write` function to redirect printf to UART |
-| **`rot_core.h`** | `Core/Inc/` | Define Trust Anchor core behavior interface |
-| **`rot_core.c`** | `Core/Src/` | Implement `ROT_System_Init` and `ROT_SecureBoot_Sequence` logic |
-
-### 3. Key Code Modifications
-
-#### A. `Core/Src/main.c` (Initialization Order Adjustment)
-
-*To eliminate MCU startup delay, GPIO initialization must be moved before clock configuration.*
+To mitigate race conditions where the Pi boots faster than the STM32, the GPIO Initialization is moved before the System Clock Configuration.
 
 ```c
-/* MCU Configuration--------------------------------------------------------*/
-
+/* Core/Src/main.c */
 HAL_Init();
 
-/* USER CODE BEGIN Init */
-// [CRITICAL] Early GPIO initialization to ensure PF15 low on power-on
+// [CRITICAL] Early Init: Lock the Pi before configuring the clock
 MX_GPIO_Init();
 HAL_GPIO_WritePin(PI_RESET_GPIO_Port, PI_RESET_Pin, GPIO_PIN_RESET);
-/* USER CODE END Init */
 
-SystemClock_Config();
-
-/* Initialize all configured peripherals */
-// MX_GPIO_Init(); // [REMOVE] Must remove or comment out this line from original position
-MX_USART1_UART_Init();
-
-/* USER CODE BEGIN 2 */
-ROT_System_Init();         // System initialization
-ROT_SecureBoot_Sequence(); // Execute secure boot sequence
-/* USER CODE END 2 */
+SystemClock_Config(); // Standard clock config follows
 ```
 
----
+### 3. File Structure
 
-## ⚙️ Development Environment Operations
-
-This project uses **STM32CubeIDE** for compilation and programming. Detailed operation steps:
-
-### 1. Build Project
-
-1. In IDE **Project Explorer**, click project name `MiniROT_Final`
-2. Click **🔨 (Hammer Icon)** in top toolbar
-3. Observe **Console** window confirming:
-   > `Build Finished. 0 errors, 0 warnings.`
-
-### 2. Debug Configuration Setup
-
-*Required for first execution or after configuration changes:*
-
-1. Click menu `Run -> Debug Configurations...`
-2. Double-click **STM32 Cortex-M C/C++ Application** in left list to create new configuration
-3. **Main Tab**: Confirm **C/C++ Application** points to `Debug/your_project_name.elf`
-4. **Debugger Tab**:
-   - **Debug probe**: Select `ST-LINK (GDB Server)`
-   - **Interface**: Select `SWD`
-5. Click **Apply** to save configuration
-
-### 3. Programming and Execution
-
-1. Connect STM32 **CN1 (ST-LINK USB)** to computer
-2. Click **▶️ (Green Play Icon)** in toolbar
-3. **Expected Result**: IDE Console shows `Download verified successfully`
-
-### 4. Open UART Monitoring
-
-1. In IDE bottom **Console** area, find and click **💻+ (Open Console)** icon
-2. Select **Command Shell Console**
-3. **Connection Type**: `Serial Port`
-4. **Settings**:
-   - **Serial port**: Select corresponding COM Port
-   - **Baud rate**: `115200`
-   - **Data size**: `8`, **Parity**: `None`, **Stop bits**: `1`
-5. Click **Finish**. After connection, press STM32 **Reset button** to view Log
+- **Core/Src/rot_core.c**: Implements the Secure Boot state machine (Hold → Release)
+- **Core/Src/uart_utils.c**: Implements printf redirection to UART
 
 ---
 
-## 🧪 Verification Results
+## Getting Started
 
-### Test Steps
+### Prerequisites
 
-1. **Power Off**: Unplug Raspberry Pi USB-C power
-2. **Reset**: Press STM32 black Reset button (ensure STM32 in initial state, PF15 low)
-3. **Power On**: Plug in Raspberry Pi power
+- **IDE**: STM32CubeIDE (v1.16.0 or later recommended)
+- **Hardware**: STM32 NUCLEO-U575ZI-Q board + Raspberry Pi 4B
 
-### Expected Phenomena
+### Build & Run
 
-#### Phase 1 (0s - 5s):
-- **STM32 Log**: Shows `Holding Reset: 5...`
-- **Pi Status**: **Green LED (ACT) completely off**, Red LED (PWR) constantly on
-- **Conclusion**: Pi successfully locked, unable to boot
+1. **Import**: Open STM32CubeIDE → File → Import → Existing Projects into Workspace → Select this directory
+2. **Build**: Click the Hammer icon (Build). Ensure 0 errors
+3. **Run**: Connect STM32 via USB and click Run
 
-#### Phase 2 (5s+):
-- **STM32 Log**: Shows `Verification PASS. Releasing the Gate!`
-- **Pi Status**: **Green LED (ACT) starts blinking**, system begins booting
-- **Conclusion**: Pi successfully released, normal boot sequence initiated
+### Verification
 
----
-
-## 🎯 Success Criteria
-
-- **Absolute Control**: STM32 can prevent Pi boot by holding reset line
-- **Timed Release**: STM32 releases Pi after simulated verification (5 seconds)
-- **Reliable Operation**: Consistent behavior across power cycles
-- **Clean Logs**: Clear status output via UART for debugging
+1. **Open a Serial Terminal** (115200, 8N1)
+2. **Power Cycle**:
+   - Hold STM32 Reset button
+   - Plug in Raspberry Pi power (Pi Green LED should be OFF)
+   - Release STM32 Reset button
+3. **Observe**:
+   - Log: `Holding Reset...` → Pi remains OFF
+   - Log: `Releasing the Gate!` → Pi Green LED starts blinking (Boot)
 
 ---
 
-*Phase 1 Complete: Trust Anchor established absolute hardware control over Target System.*
+## Success Criteria Checklist
+
+- [x] **Absolute Control**: STM32 physically prevents Pi from booting on power-up
+- [x] **Reliable Reset**: Uses PF15 (Open Drain) + Shared Chassis Ground to ensure valid logic levels
+- [x] **Early Init**: Software logic handles power-on race conditions
