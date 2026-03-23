@@ -1,12 +1,12 @@
 #ifndef MBEDTLS_CONFIG_H
 #define MBEDTLS_CONFIG_H
 
-// 1. 系統設定：移除 OS 依賴
+// 1. System configuration: Remove OS dependencies
 #define MBEDTLS_NO_PLATFORM_ENTROPY
 #define MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES
 
 
-// 2. 演算法開關
+// 2. Algorithm configuration
 #define MBEDTLS_RSA_C
 #define MBEDTLS_SHA256_C
 #define MBEDTLS_MD_C
@@ -16,13 +16,13 @@
 #define MBEDTLS_PK_C
 #define MBEDTLS_PK_PARSE_C
 
-// 3. 必要參數
+// 3. Required parameters
 
 #define MBEDTLS_PKCS1_V15
 
-// 4. 記憶體優化
+// 4. Memory optimization for embedded systems
 #define MBEDTLS_MPI_WINDOW_SIZE  1
-#define MBEDTLS_MPI_MAX_SIZE     256 // 2048-bit RSA
+#define MBEDTLS_MPI_MAX_SIZE     256 // Maximum size for 2048-bit RSA
 
 #include "mbedtls/check_config.h"
 #endif

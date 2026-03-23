@@ -1,6 +1,7 @@
-# Build Artifacts (generated during compilation)
+# Compilation Artifacts
 Debug/
 Release/
+build/
 *.elf
 *.bin
 *.hex
@@ -9,21 +10,33 @@ Release/
 *.d
 *.su
 *.list
+*.cyclo
+*.dep
+makefile
+objects.list
+objects.mk
+sources.mk
+subdir.mk
 
-# IDE Configuration Files (user-specific settings)
+# IDE & System Metadata (IDE configuration files - generated artifacts)
 .settings/
 .mxproject
 *.launch
-
-# STM32CubeMX Backup Files
-*.ioc.bak
-
-# Operating System Generated Files
 .DS_Store
 Thumbs.db
+*.tmp
+*.bak
+*.swp
+*~
 
-# --- Essential Project Files (DO NOT IGNORE) ---
-# STM32CubeMX Configuration (.ioc)
-# STM32CubeIDE Project Files (.project, .cproject)
-# HAL Library and Generated Code (Core/, Drivers/)
-# Linker Scripts (*.ld)
+# Security & Secrets (Cryptographic material protection)
+# Ignore all crypto_data folder contents for security
+crypto_data/*
+# Exception: Force tracking of public demo data for repository functionality
+!crypto_data/firmware.bin
+!crypto_data/public_key.der
+!crypto_data/signature.bin
+# Note: priv.pem (private key) is excluded by first rule and will not be tracked
+
+# 4. STM32CubeMX Backup
+*.ioc.bak
