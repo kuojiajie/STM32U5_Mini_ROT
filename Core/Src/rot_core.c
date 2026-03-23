@@ -22,7 +22,7 @@ void ROT_System_Init(void) {
 }
 
 void ROT_SecureBoot_Sequence(void) {
-    printf("\r\n[ROT] Phase 2: Starting Secure Boot Sequence...\r\n");
+    printf("\r\n[ROT] Starting Secure Boot Sequence...\r\n");
 
     // Maintain system lockdown during verification
     printf("[ROT] System LOCKED. Verifying Signature...\r\n");
