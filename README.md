@@ -4,13 +4,15 @@
 
 This project implements a bare-metal **Root of Trust (RoT)** on an STM32U5 microcontroller to control the secure boot process of a target system (**Raspberry Pi 4B**).
 
-The STM32 acts as a hardware gatekeeper. It physically holds the Pi in **RESET** state upon power-up, executes a verification sequence (simulated delay or crypto-check), and only releases the RESET line if validation passes.
+The STM32 acts as a hardware gatekeeper. It physically holds the Pi in **RESET** state upon power-up, **reads firmware directly from Flash memory**, calculates its SHA-256 hash, and verifies it against an RSA-2048 signature. Only if the verification passes will it release the **RESET** line.
+
+---
 
 ## 🛠️ Hardware Setup
 
 ### Connection Interface
 
-**⚠️ Critical:** A low-impedance **Common Ground** is required. It is highly recommended to connect the USB metal shells of both devices together to prevent ground loops.
+**⚠️ Critical:** A low-impedance **Common Ground** is required. It is highly recommended to connect the USB metal shells of both devices together.
 
 | STM32 Pin | Raspberry Pi Pin | Signal Name | Description |
 | :--- | :--- | :--- | :--- |
@@ -45,13 +47,13 @@ SystemClock_Config(); // Standard clock config follows
 
 ### 2. Hardware Control Logic (`.ioc`)
 
-**PF15** is configured as `Output Open Drain`. This allows the STM32 to safely pull the Pi's RUN pin low (Reset) or float high (Boot) without voltage conflicts.
+- **PF15** is configured as `Output Open Drain`. This allows safe control of the Pi's Reset logic.
+- **RNG** (Random Number Generator) is enabled for cryptographic operations.
 
-### 3. File Structure
+### 3. Verification Logic
 
-- **`Core/Src/rot_core.c`**: Implements the Secure Boot state machine (Hold -> Release)
-- **`Core/Src/uart_utils.c`**: Redirects `printf` to UART1 for debug logging
-- **`Core/mbedtls/`**: (Phase 2) Integrated mbedTLS library for cryptographic verification
+- **Real-time Hashing**: Reads firmware data from Flash address `0x08100000` and calculates SHA-256.
+- **Signature Verification**: Uses **mbedTLS** to verify the hash against an RSA-2048 signature stored in `keys_data.h`.
 
 ---
 
@@ -72,7 +74,10 @@ This repository contains all necessary drivers and libraries to compile directly
    - `File` -> `Import` -> `Existing Projects into Workspace`
    - Select the project directory
 3. **Build**: Click the **Hammer** icon (Should complete with 0 errors)
-4. **Run**: Connect STM32 via USB and click **Run**
+4. **Flash Firmware Data (Crucial Step)**:
+   - The project verifies actual data in Flash. You must load the test firmware.
+   - Run Configuration -> Startup -> Load Image and Symbols -> Add `crypto_data/data.bin` at address `0x08100000`.
+5. **Run**: Connect STM32 via USB and click **Run**
 
 ### Verification
 
@@ -82,8 +87,8 @@ This repository contains all necessary drivers and libraries to compile directly
    - Plug in Raspberry Pi power (Pi Green LED should be **OFF**)
    - Release STM32 Reset button
 3. **Observe**:
-   - Log: `[ROT] System Initialized. Gate is CLOSED.`
-   - Log: `[ROT] Verifying...`
+   - Log: `[CRYPTO] Calculating SHA-256 from Flash...`
+   - Log: `[CRYPTO] Success: Signature Valid.`
    - Log: `[ROT] Releasing the Gate!` -> **Pi Green LED starts blinking**
 
 ---
@@ -92,4 +97,7 @@ This repository contains all necessary drivers and libraries to compile directly
 
 - [x] **Absolute Control**: STM32 physically prevents Pi from booting on power-up
 - [x] **Reliable Reset**: Uses PF15 (Open Drain) + Shared Chassis Ground
-- [x] **Early Init**: Software logic handles power-on race conditions.
+- [x] **Real Crypto**: Implements SHA-256 hashing and RSA-2048 verification using mbedTLS
+- [x] **Early Init**: Software logic handles power-on race conditions
+
+---

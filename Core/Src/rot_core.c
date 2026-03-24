@@ -26,19 +26,19 @@ void ROT_SecureBoot_Sequence(void) {
     printf("\r\n[ROT] Real Firmware Verification...\r\n");
     HAL_Delay(1000);
 
-    // 1. 定義韌體位置
-    // 指向我們剛剛燒錄 "TRUST" 的地方
+    // 1. Define firmware location in Flash memory
+    // Point to firmware image programmed at 0x08100000
     const uint8_t *FW_PTR = (const uint8_t *)0x08100000;
-    const size_t FW_SIZE = 5; // "TRUST" 是 5 個字元
+    const size_t FW_SIZE = 5; // "TRUST" firmware consists of 5 characters
 
-    // 2. 現場計算 Hash
+    // 2. Calculate hash in real-time from Flash content
     uint8_t calculated_hash[32];
     ROT_Crypto_SHA256(FW_PTR, FW_SIZE, calculated_hash);
 
-    // 3. 呼叫驗證 (注意：這次傳入的是 calculated_hash)
+    // 3. Verify signature using calculated hash (not hardcoded)
     int result = ROT_Crypto_VerifySignature(calculated_hash, FIRMWARE_SIGNATURE, ROT_PUBKEY);
 
-    // 4. 決策 (跟之前一樣)
+    // 4. Security decision based on verification result
     if (result == 0) {
         printf("[ROT] PASS. Releasing Pi.\r\n");
         HAL_GPIO_WritePin(PI_RESET_GPIO_Port, PI_RESET_Pin, GPIO_PIN_SET);

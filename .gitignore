@@ -1,5 +1,5 @@
 # =======================================================
-# 1. 編譯產生的垃圾 (Build Artifacts) - 必須忽略
+# 1. Build Artifacts - Must be ignored
 # =======================================================
 Debug/
 Release/
@@ -21,7 +21,7 @@ sources.mk
 subdir.mk
 
 # =======================================================
-# 2. IDE 與 系統暫存檔 (IDE Settings) - 建議忽略
+# 2. IDE Settings & System Temporary Files - Recommended to ignore
 # =======================================================
 .settings/
 .mxproject
@@ -34,19 +34,19 @@ Thumbs.db
 *~
 
 # =======================================================
-# 3. 資安與加密資料 (Security & Secrets) - 核心重點
+# 3. Security & Cryptographic Material - Core Focus
 # =======================================================
-# 預設忽略 crypto_data 資料夾下的所有東西
+# By default, ignore all contents in crypto_data folder
 crypto_data/*
-# [例外規則] 強制保留公開的測試資料 (讓使用者 Clone 下來能跑)
-# 根據你的 tree 結構，保留這三個檔案：
+# [Exception Rule] Force track public test data for repository functionality
+# Preserve these files for users to run after cloning:
 !crypto_data/data.bin
 !crypto_data/pub.der
 !crypto_data/sig.bin
 !crypto_data/firmware.bin
-# 注意：priv.pem (私鑰) 會被第一行規則擋住，絕對不會上傳。
+# Note: priv.pem (private key) is blocked by first rule and will never be uploaded.
 
 # =======================================================
-# 4. 備份檔
+# 4. Backup Files
 # =======================================================
 *.ioc.bak
