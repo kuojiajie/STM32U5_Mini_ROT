@@ -54,3 +54,32 @@ exit:
     mbedtls_pk_free(&pk);
     return ret;
 }
+
+/**
+* @brief 計算 Flash 記憶體的 SHA-256 雜湊值
+* @param start_addr Flash 起始位址
+* @param size       資料長度 (bytes)
+* @param output     輸出的 32-byte Hash
+*/
+
+void ROT_Crypto_SHA256(const uint8_t* start_addr, size_t size, uint8_t* output) {
+
+    printf("[CRYPTO] Calculating SHA-256 from Flash (Addr: %p, Size: %d)...\r\n", start_addr, size);
+
+    mbedtls_sha256_context ctx;
+
+    mbedtls_sha256_init(&ctx);
+
+    // 0 = SHA-256 (非 224)
+    mbedtls_sha256_starts(&ctx, 0);
+
+    // 關鍵：直接把 Flash 指標傳進去讀取
+    mbedtls_sha256_update(&ctx, start_addr, size);
+
+    mbedtls_sha256_finish(&ctx, output);
+
+    mbedtls_sha256_free(&ctx);
+
+    printf("[CRYPTO] Hash Calculation Complete.\r\n");
+
+}

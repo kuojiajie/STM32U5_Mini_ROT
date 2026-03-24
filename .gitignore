@@ -1,4 +1,6 @@
-# Compilation Artifacts
+# =======================================================
+# 1. 編譯產生的垃圾 (Build Artifacts) - 必須忽略
+# =======================================================
 Debug/
 Release/
 build/
@@ -18,7 +20,9 @@ objects.mk
 sources.mk
 subdir.mk
 
-# IDE & System Metadata (IDE configuration files - generated artifacts)
+# =======================================================
+# 2. IDE 與 系統暫存檔 (IDE Settings) - 建議忽略
+# =======================================================
 .settings/
 .mxproject
 *.launch
@@ -29,14 +33,20 @@ Thumbs.db
 *.swp
 *~
 
-# Security & Secrets (Cryptographic material protection)
-# Ignore all crypto_data folder contents for security
+# =======================================================
+# 3. 資安與加密資料 (Security & Secrets) - 核心重點
+# =======================================================
+# 預設忽略 crypto_data 資料夾下的所有東西
 crypto_data/*
-# Exception: Force tracking of public demo data for repository functionality
+# [例外規則] 強制保留公開的測試資料 (讓使用者 Clone 下來能跑)
+# 根據你的 tree 結構，保留這三個檔案：
+!crypto_data/data.bin
+!crypto_data/pub.der
+!crypto_data/sig.bin
 !crypto_data/firmware.bin
-!crypto_data/public_key.der
-!crypto_data/signature.bin
-# Note: priv.pem (private key) is excluded by first rule and will not be tracked
+# 注意：priv.pem (私鑰) 會被第一行規則擋住，絕對不會上傳。
 
-# 4. STM32CubeMX Backup
+# =======================================================
+# 4. 備份檔
+# =======================================================
 *.ioc.bak

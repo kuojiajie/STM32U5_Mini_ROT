@@ -4,11 +4,11 @@
  * @description Hardware-level secure boot control and verification logic
  */
 
-#include "rot_core.h"
 #include "main.h"
+#include <stdio.h>
+#include "rot_core.h"
 #include "rot_crypto.h"
 #include "keys_data.h"
-#include <stdio.h>
 
 void ROT_System_Init(void) {
     // Logging only - GPIO initialization handled in main.c
@@ -22,42 +22,29 @@ void ROT_System_Init(void) {
 }
 
 void ROT_SecureBoot_Sequence(void) {
-    printf("\r\n[ROT] Starting Secure Boot Sequence...\r\n");
 
-    // Maintain system lockdown during verification
-    printf("[ROT] System LOCKED. Verifying Signature...\r\n");
-    HAL_Delay(1000); // Allow UART buffer to settle
+    printf("\r\n[ROT] Real Firmware Verification...\r\n");
+    HAL_Delay(1000);
 
-    // Execute mbedTLS signature verification (critical security step)
-    // Pass hardcoded cryptographic data from keys_data.h
-    int result = ROT_Crypto_VerifySignature(FIRMWARE_HASH, FIRMWARE_SIGNATURE, ROT_PUBKEY);
+    // 1. 定義韌體位置
+    // 指向我們剛剛燒錄 "TRUST" 的地方
+    const uint8_t *FW_PTR = (const uint8_t *)0x08100000;
+    const size_t FW_SIZE = 5; // "TRUST" 是 5 個字元
 
-    // Make security decision based on verification result
+    // 2. 現場計算 Hash
+    uint8_t calculated_hash[32];
+    ROT_Crypto_SHA256(FW_PTR, FW_SIZE, calculated_hash);
+
+    // 3. 呼叫驗證 (注意：這次傳入的是 calculated_hash)
+    int result = ROT_Crypto_VerifySignature(calculated_hash, FIRMWARE_SIGNATURE, ROT_PUBKEY);
+
+    // 4. 決策 (跟之前一樣)
     if (result == 0) {
-        // --- PASS: Signature verification successful ---
-        printf("[ROT] PASS! Signature is Valid.\r\n");
-        printf("[ROT] Releasing the Gate... Pi Booting.\r\n");
-
-        // Release target system (Open Drain High = Float)
+        printf("[ROT] PASS. Releasing Pi.\r\n");
         HAL_GPIO_WritePin(PI_RESET_GPIO_Port, PI_RESET_Pin, GPIO_PIN_SET);
     } else {
-        // --- FAIL: Signature verification failed ---
-        printf("[ROT] FAIL! Invalid Signature (Error: -0x%04X)\r\n", -result);
-        printf("[ROT] SYSTEM HALTED. Pi will NOT boot.\r\n");
-
-        // Permanent lockdown (maintain reset line low)
+        printf("[ROT] FAIL. System Locked.\r\n");
         HAL_GPIO_WritePin(PI_RESET_GPIO_Port, PI_RESET_Pin, GPIO_PIN_RESET);
-
-        // Security breach alert loop
-        while(1) {
-            HAL_Delay(1000);
-            printf("[ROT] ALERT: Security Breach!\r\n");
-        }
-    }
-
-    // Monitoring mode (only reached on successful verification)
-    while(1) {
-        HAL_Delay(5000);
-        printf("[ROT] Status: System Running Securely.\r\n");
+        while(1) { HAL_Delay(1000); }
     }
 }
