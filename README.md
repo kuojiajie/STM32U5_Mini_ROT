@@ -4,9 +4,9 @@
 
 This project implements a bare-metal **Root of Trust (RoT)** on an STM32U5 microcontroller to control the secure boot process of a target system (**Raspberry Pi 4B**).
 
-The STM32 acts as a hardware gatekeeper. It physically holds the Pi in **RESET** state upon power-up, **reads firmware directly from Flash memory**, calculates its SHA-256 hash, and verifies it against an RSA-2048 signature. Only if the verification passes will it release the **RESET** line.
+The STM32 acts as a hardware gatekeeper. It physically holds the Pi in **RESET** state upon power-up, reads firmware directly from Flash memory, calculates its SHA-256 hash, and verifies it against an RSA-2048 signature.
 
----
+**✨ Advanced Feature:** It features an **A/B Dual Image Auto-Recovery** mechanism. If the primary firmware is corrupted or tampered with, the RoT automatically falls back to a secure backup image, ensuring system availability.
 
 ## 🛠️ Hardware Setup
 
@@ -24,8 +24,6 @@ The STM32 acts as a hardware gatekeeper. It physically holds the Pi in **RESET**
 - **STM32**: Powered via ST-LINK USB
 - **Raspberry Pi**: Independently powered via USB-C
 
----
-
 ## 💻 Technical Implementation
 
 This project deviates from standard STM32CubeMX generation to meet security requirements.
@@ -34,17 +32,6 @@ This project deviates from standard STM32CubeMX generation to meet security requ
 
 To mitigate race conditions where the Pi boots faster than the STM32, the **GPIO Initialization** is moved **before** the System Clock Configuration.
 
-```c
-/* Core/Src/main.c */
-HAL_Init();
-
-// [CRITICAL] Early Init: Lock the Pi before configuring the clock
-MX_GPIO_Init();
-HAL_GPIO_WritePin(PI_RESET_GPIO_Port, PI_RESET_Pin, GPIO_PIN_RESET);
-
-SystemClock_Config(); // Standard clock config follows
-```
-
 ### 2. Hardware Control Logic (`.ioc`)
 
 - **PF15** is configured as `Output Open Drain`. This allows safe control of the Pi's Reset logic.
@@ -52,14 +39,14 @@ SystemClock_Config(); // Standard clock config follows
 
 ### 3. Verification Logic
 
-- **Real-time Hashing**: Reads firmware data from Flash address `0x08100000` and calculates SHA-256.
+- **Real-time Hashing**: Reads firmware data from Flash memory via direct pointers and calculates SHA-256 chunk-by-chunk.
 - **Signature Verification**: Uses **mbedTLS** to verify the hash against an RSA-2048 signature stored in `keys_data.h`.
 
----
+### 4. A/B Dual Image Auto-Recovery
+
+The internal flash is partitioned into **Slot A** (`0x08100000`) and **Slot B** (`0x08180000`). If Slot A fails cryptographic verification, the RoT automatically initiates a fallback sequence to verify and boot from Slot B, providing a robust hardware failsafe.
 
 ## 🚀 Getting Started
-
-This repository contains all necessary drivers and libraries to compile directly.
 
 ### Prerequisites
 
@@ -68,36 +55,41 @@ This repository contains all necessary drivers and libraries to compile directly
 
 ### Build & Run
 
-1. **Clone**: `git clone <repo_url>`
+1. **Clone**: `git clone https://github.com/yourusername/STM32U5_Mini_ROT.git`
 2. **Import**:
-   - Open STM32CubeIDE
-   - `File` -> `Import` -> `Existing Projects into Workspace`
+   - Open STM32CubeIDE -> `File` -> `Import` -> `Existing Projects into Workspace`
    - Select the project directory
-3. **Build**: Click the **Hammer** icon (Should complete with 0 errors)
+3. **Build**: Click the **Hammer** icon.
 4. **Flash Firmware Data (Crucial Step)**:
-   - The project verifies actual data in Flash. You must load the test firmware.
-   - Run Configuration -> Startup -> Load Image and Symbols -> Add `crypto_data/data.bin` at address `0x08100000`.
-5. **Run**: Connect STM32 via USB and click **Run**
+   - Go to `Run -> Run Configurations -> Startup -> Load Image and Symbols`.
+   - Add `crypto_data/data.bin` at address **`0x08100000`** (Slot A).
+   - Add `crypto_data/data.bin` at address **`0x08180000`** (Slot B).
+5. **Run**: Connect STM32 via USB and click **Debug/Run**.
 
-### Verification
+## 🧪 Verification & Chaos Testing
 
-1. Open a Serial Terminal (115200, 8N1)
-2. **Power Cycle**:
-   - Hold STM32 **Black Reset** button
-   - Plug in Raspberry Pi power (Pi Green LED should be **OFF**)
-   - Release STM32 Reset button
-3. **Observe**:
-   - Log: `[CRYPTO] Calculating SHA-256 from Flash...`
-   - Log: `[CRYPTO] Success: Signature Valid.`
-   - Log: `[ROT] Releasing the Gate!` -> **Pi Green LED starts blinking**
+Open a Serial Terminal (115200, 8N1) and observe the STM32's behavior.
 
----
+### Test 1: Normal Boot
+
+With valid `data.bin` in both slots:
+- Log: `[ROT] >>> Attempting to Boot from Slot A <<<`
+- Log: `[ROT] SUCCESS: Slot A is VALID.`
+- Log: `[ROT] Releasing Pi Gate.` -> **Pi Green LED starts blinking**
+
+### Test 2: Auto-Recovery (Chaos Test)
+
+1. Go to Run Configurations and change the Slot A image (`0x08100000`) to `crypto_data/hacked.bin`.
+2. Run the Debugger again.
+3. **Observe the Failsafe:**
+   - Log: `FAIL! (Error: -0xXXXX)`
+   - Log: `[ROT] WARNING: Slot A Corrupted or Tampered!`
+   - Log: `[ROT] Initiating Auto-Recovery Procedure...`
+   - Log: `[ROT] >>> Attempting to Boot from Slot B (Backup) <<<`
+   - Log: `[ROT] System Recovered! Releasing Pi Gate.` -> **Pi Boots Successfully**
 
 ## ✅ Success Criteria
 
-- [x] **Absolute Control**: STM32 physically prevents Pi from booting on power-up
-- [x] **Reliable Reset**: Uses PF15 (Open Drain) + Shared Chassis Ground
-- [x] **Real Crypto**: Implements SHA-256 hashing and RSA-2048 verification using mbedTLS
-- [x] **Early Init**: Software logic handles power-on race conditions
-
----
+- [x] **Absolute Control**: STM32 physically prevents Pi from booting on power-up.
+- [x] **Real Crypto**: Implements SHA-256 hashing and RSA-2048 verification using mbedTLS.
+- [x] **High Availability**: Implements Dual-Slot Auto-Recovery against firmware corruption.

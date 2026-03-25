@@ -41,6 +41,7 @@ crypto_data/*
 # [Exception Rule] Force track public test data for repository functionality
 # Preserve these files for users to run after cloning:
 !crypto_data/data.bin
+!crypto_data/hacked.bin
 !crypto_data/pub.der
 !crypto_data/sig.bin
 !crypto_data/firmware.bin
