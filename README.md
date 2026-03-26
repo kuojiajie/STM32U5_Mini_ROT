@@ -2,11 +2,13 @@
 
 ## 📖 Project Overview
 
-This project implements a bare-metal **Root of Trust (RoT)** on an STM32U5 microcontroller to control the secure boot process of a target system (**Raspberry Pi 4B**).
+This project implements a bare-metal **Root of Trust (RoT)** on an STM32U5 microcontroller to control secure boot process of a target system (**Raspberry Pi 4B**).
 
 The STM32 acts as a hardware gatekeeper. It physically holds the Pi in **RESET** state upon power-up, reads firmware directly from Flash memory, calculates its SHA-256 hash, and verifies it against an RSA-2048 signature.
 
-**✨ Advanced Feature:** It features an **A/B Dual Image Auto-Recovery** mechanism. If the primary firmware is corrupted or tampered with, the RoT automatically falls back to a secure backup image, ensuring system availability.
+**✨ Advanced Feature:** It features an **A/B Dual Image Auto-Recovery** mechanism with **Self-Healing** capabilities. If the primary firmware is corrupted, the RoT automatically falls back to a secure backup image, ensures system availability, and transparently repairs the corrupted slot.
+
+---
 
 ## 🛠️ Hardware Setup
 
@@ -23,6 +25,8 @@ The STM32 acts as a hardware gatekeeper. It physically holds the Pi in **RESET**
 
 - **STM32**: Powered via ST-LINK USB
 - **Raspberry Pi**: Independently powered via USB-C
+
+---
 
 ## 💻 Technical Implementation
 
@@ -44,7 +48,13 @@ To mitigate race conditions where the Pi boots faster than the STM32, the **GPIO
 
 ### 4. A/B Dual Image Auto-Recovery
 
-The internal flash is partitioned into **Slot A** (`0x08100000`) and **Slot B** (`0x08180000`). If Slot A fails cryptographic verification, the RoT automatically initiates a fallback sequence to verify and boot from Slot B, providing a robust hardware failsafe.
+The internal flash is partitioned into **Slot A** (`0x08100000`) and **Slot B** (`0x08180000`). If Slot A fails cryptographic verification, the RoT automatically initiates a fallback sequence to verify and boot from Slot B.
+
+### 5. Self-Healing Mechanism (Flash Synchronization)
+
+If a fallback to Slot B occurs, the system will execute a background synchronization task. It utilizes STM32 HAL Flash APIs to unlock, erase the corrupted Slot A (Sector Erase), and reprogram it (Quad-Word aligned) using verified data from Slot B, fully restoring dual-slot redundancy.
+
+---
 
 ## 🚀 Getting Started
 
@@ -55,16 +65,17 @@ The internal flash is partitioned into **Slot A** (`0x08100000`) and **Slot B** 
 
 ### Build & Run
 
-1. **Clone**: `git clone https://github.com/yourusername/STM32U5_Mini_ROT.git`
+1. **Clone**: `git clone <repo_url>`
 2. **Import**:
    - Open STM32CubeIDE -> `File` -> `Import` -> `Existing Projects into Workspace`
-   - Select the project directory
 3. **Build**: Click the **Hammer** icon.
 4. **Flash Firmware Data (Crucial Step)**:
    - Go to `Run -> Run Configurations -> Startup -> Load Image and Symbols`.
    - Add `crypto_data/data.bin` at address **`0x08100000`** (Slot A).
    - Add `crypto_data/data.bin` at address **`0x08180000`** (Slot B).
 5. **Run**: Connect STM32 via USB and click **Debug/Run**.
+
+---
 
 ## 🧪 Verification & Chaos Testing
 
@@ -77,19 +88,26 @@ With valid `data.bin` in both slots:
 - Log: `[ROT] SUCCESS: Slot A is VALID.`
 - Log: `[ROT] Releasing Pi Gate.` -> **Pi Green LED starts blinking**
 
-### Test 2: Auto-Recovery (Chaos Test)
+### Test 2: Auto-Recovery & Self-Healing (Chaos Test)
 
 1. Go to Run Configurations and change the Slot A image (`0x08100000`) to `crypto_data/hacked.bin`.
 2. Run the Debugger again.
-3. **Observe the Failsafe:**
+3. **Observe Failsafe & Healing:**
    - Log: `FAIL! (Error: -0xXXXX)`
    - Log: `[ROT] WARNING: Slot A Corrupted or Tampered!`
-   - Log: `[ROT] Initiating Auto-Recovery Procedure...`
    - Log: `[ROT] >>> Attempting to Boot from Slot B (Backup) <<<`
+   - Log: `[SYNC] Erasing Slot A... Programming Slot A...`
+   - Log: `[ROT] Self-Healing Complete. Slot A is restored.`
    - Log: `[ROT] System Recovered! Releasing Pi Gate.` -> **Pi Boots Successfully**
+4. **The Magic Reboot**: Press the physical RESET button on the STM32. You will observe that it boots from Slot A instantly, proving the flash was successfully rewritten!
+
+---
 
 ## ✅ Success Criteria
 
 - [x] **Absolute Control**: STM32 physically prevents Pi from booting on power-up.
 - [x] **Real Crypto**: Implements SHA-256 hashing and RSA-2048 verification using mbedTLS.
 - [x] **High Availability**: Implements Dual-Slot Auto-Recovery against firmware corruption.
+- [x] **Self-Healing**: Utilizes hardware Flash APIs to erase and reprogram corrupted memory sectors on-the-fly.
+
+---
