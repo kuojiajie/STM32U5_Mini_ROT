@@ -22,24 +22,37 @@ void ROT_System_Init(void) {
     printf("========================================\r\n");
 }
 
-/**
- * @brief Verify firmware integrity at specified flash memory slot
- * @param start_address Base address of firmware slot in flash memory (e.g., 0x08100000)
- * @return 0 on verification success, non-zero on verification failure
- */
+// Firmware header structure definition for dynamic image parsing
+typedef struct {
+    uint32_t magic_word;     // Magic identifier (0x544F524D = "MROT")
+    uint32_t payload_length; // Actual firmware payload length in bytes
+} fw_header_t;
 
 int ROT_Verify_Slot(uint32_t start_address) {
-    printf("[ROT] Checking Slot at 0x%08lX...\r\n", start_address);
+    printf("\r\n[ROT] Checking Slot at 0x%08X...\r\n", (unsigned int)start_address);
 
-    // Cast address to pointer for direct flash memory access
-    const uint8_t *fw_ptr = (const uint8_t *)start_address;
-    const size_t fw_size = 5; // Fixed firmware size for "TRUST" test pattern
+    // Map flash start address to firmware header structure
+    const fw_header_t *header = (const fw_header_t *)start_address;
 
-    // Calculate SHA-256 hash in real-time from flash content
+    // Verify magic word for file format validation
+    if (header->magic_word != 0x544F524D) {
+        printf("[ROT] ERROR: Invalid Magic Word! This is not an MROT file.\r\n");
+        return -1; // Verification failed, exit early
+    }
+
+    // Extract dynamic payload length from header
+    size_t dynamic_length = header->payload_length;
+    printf("[ROT] MROT Header Found! Payload Length: %d bytes.\r\n", dynamic_length);
+
+    // Calculate actual payload data location
+    // Payload starts after header (8 bytes) from the base address
+    const uint8_t *payload_ptr = (const uint8_t *)(start_address + sizeof(fw_header_t));
+
+    // Calculate hash using dynamic length extracted from header
     uint8_t calculated_hash[32];
-    ROT_Crypto_SHA256(fw_ptr, fw_size, calculated_hash);
+    ROT_Crypto_SHA256(payload_ptr, dynamic_length, calculated_hash);
 
-    // Verify cryptographic signature using mbedTLS RSA-2048
+    // Verify signature against calculated hash
     return ROT_Crypto_VerifySignature(calculated_hash, FIRMWARE_SIGNATURE, ROT_PUBKEY);
 }
 

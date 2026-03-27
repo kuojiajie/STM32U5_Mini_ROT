@@ -194,8 +194,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-    // Redirect printf output to UART1
-    // Timeout: 100ms to prevent system deadlock value: file %s on line %d\r\n", file, line) */
+     ex: printf("Wrong parameter value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
