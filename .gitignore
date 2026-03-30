@@ -48,6 +48,9 @@ crypto_data/*
 !crypto_data/pack_tool.py
 !crypto_data/good_fw.bin
 !crypto_data/bad_fw.bin
+!crypto_data/fw_v1.bin
+!crypto_data/fw_v2.bin
+!crypto_data/fw_v3.bin
 # Note: priv.pem (private key) is blocked by first rule and will never be uploaded.
 
 # =======================================================
